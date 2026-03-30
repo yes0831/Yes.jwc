@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>教务信息 - 学校公示</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <p class="eyebrow">福建中医药大学教务处</p>
+        <h1>学校公示抓取页</h1>
+        <p class="intro">
+          自动同步教务处网站“教务信息 &gt; 公示”栏目，支持分页浏览、正文预览，并补充附件与结构化表格数据。
+        </p>
+        <div class="hero-actions">
+          <button id="refreshButton" class="primary-button" type="button">刷新当前页</button>
+          <a class="ghost-link" href="https://jwc.fjtcm.edu.cn/955/list.htm" target="_blank" rel="noreferrer"
+            >打开原站栏目</a
+          >
+        </div>
+        <div class="hero-stats">
+          <article class="stat-card">
+            <p class="stat-label">最新同步</p>
+            <strong id="syncTimeText" class="stat-value">--</strong>
+          </article>
+          <article class="stat-card">
+            <p class="stat-label">公告总数</p>
+            <strong id="totalItemsText" class="stat-value">--</strong>
+          </article>
+          <article class="stat-card">
+            <p class="stat-label">抓取页数</p>
+            <strong id="totalPagesText" class="stat-value">--</strong>
+          </article>
+        </div>
+      </section>
+
+      <section class="dashboard">
+        <section class="panel panel-list">
+          <div class="panel-header">
+            <div>
+              <h2>公示列表</h2>
+              <p id="statusText">正在加载数据...</p>
+            </div>
+            <div class="badge" id="sourceBadge">static</div>
+          </div>
+
+          <div id="noticeList" class="notice-list"></div>
+
+          <div class="pagination">
+            <button id="prevPageButton" class="page-button" type="button">上一页</button>
+            <span id="pageInfo" class="page-info">第 1 / 1 页</span>
+            <button id="nextPageButton" class="page-button" type="button">下一页</button>
+          </div>
+        </section>
+
+        <section class="panel panel-detail">
+          <div class="detail-head">
+            <div>
+              <p class="detail-label">正文预览</p>
+              <h2 id="detailTitle">请选择左侧一条公示</h2>
+            </div>
+            <a
+              id="detailOriginLink"
+              class="ghost-link detail-origin"
+              href="https://jwc.fjtcm.edu.cn/955/list.htm"
+              target="_blank"
+              rel="noreferrer"
+              >原站打开</a
+            >
+          </div>
+
+          <div id="detailMeta" class="detail-meta"></div>
+          <div id="detailBody" class="detail-body detail-empty">点击“页内查看”后，这里会加载学校公示正文。</div>
+        </section>
+      </section>
+    </main>
+
+    <template id="noticeCardTemplate">
+      <article class="notice-card">
+        <div class="notice-meta">
+          <span class="notice-date"></span>
+        </div>
+        <h3 class="notice-title"></h3>
+        <p class="notice-summary"></p>
+        <div class="notice-actions">
+          <button class="inline-button notice-view-button" type="button">页内查看</button>
+          <a class="inline-link notice-origin-link" target="_blank" rel="noreferrer">原站详情</a>
+        </div>
+      </article>
+    </template>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
