@@ -14,8 +14,10 @@ const totalItemsText = document.querySelector('#totalItemsText');
 const totalPagesText = document.querySelector('#totalPagesText');
 const template = document.querySelector('#noticeCardTemplate');
 const detailPanel = document.querySelector('.panel-detail');
+const body = document.body;
 
 const DATA_ROOT = new URL('./data/notices/', window.location.href);
+const mobileQuery = window.matchMedia('(max-width: 720px)');
 
 const state = {
   page: 1,
@@ -64,6 +66,12 @@ function updateHeroStats() {
   syncTimeText.textContent = formatDateTime(state.generatedAt);
   totalItemsText.textContent = state.totalItems ? `${state.totalItems} 条` : '--';
   totalPagesText.textContent = state.totalPages ? `${state.totalPages} 页` : '--';
+}
+
+function applyLayoutMode() {
+  const isMobile = mobileQuery.matches;
+  body.classList.toggle('is-mobile-layout', isMobile);
+  body.classList.toggle('is-desktop-layout', !isMobile);
 }
 
 function renderNotices(items) {
@@ -179,7 +187,7 @@ function renderDetail(data) {
   detailBody.className = 'detail-body';
   detailBody.innerHTML = `${renderAttachments(data.attachments)}${wrapTables(data.contentHtml || '<p>该公示暂无正文。</p>')}`;
 
-  if (window.matchMedia('(max-width: 720px)').matches) {
+  if (mobileQuery.matches) {
     detailPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
@@ -214,7 +222,7 @@ async function loadNotices(page = 1, options = {}) {
     renderPagination();
     updateHeroStats();
 
-    sourceBadge.textContent = data.source || 'static';
+    sourceBadge.textContent = mobileQuery.matches ? 'mobile' : data.source || 'static';
     statusText.textContent = `共 ${state.totalItems} 条，当前第 ${state.page} 页，本页展示 ${data.itemCountOnPage || state.items.length} 条。`;
 
     if (shouldSelectFirst && state.items.length && !state.selectedUrl) {
@@ -281,6 +289,12 @@ nextPageButton.addEventListener('click', () => {
   }
 });
 
+mobileQuery.addEventListener('change', () => {
+  applyLayoutMode();
+  sourceBadge.textContent = mobileQuery.matches ? 'mobile' : 'static';
+});
+
+applyLayoutMode();
 renderPagination();
 updateHeroStats();
 loadNotices(1);
