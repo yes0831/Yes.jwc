@@ -14,13 +14,13 @@ const totalItemsText = document.querySelector('#totalItemsText');
 const totalPagesText = document.querySelector('#totalPagesText');
 const template = document.querySelector('#noticeCardTemplate');
 const detailPanel = document.querySelector('.panel-detail');
-const body = document.body;
 
 const DATA_ROOT = new URL('./data/notices/', window.location.href);
 const mobileQuery = window.matchMedia('(max-width: 720px)');
+const initialPage = Math.max(1, Number.parseInt(new URLSearchParams(window.location.search).get('page') || '1', 10) || 1);
 
 const state = {
-  page: 1,
+  page: initialPage,
   totalPages: 1,
   totalItems: 0,
   items: [],
@@ -69,9 +69,15 @@ function updateHeroStats() {
 }
 
 function applyLayoutMode() {
-  const isMobile = mobileQuery.matches;
-  body.classList.toggle('is-mobile-layout', isMobile);
-  body.classList.toggle('is-desktop-layout', !isMobile);
+  document.body.classList.toggle('is-mobile-layout', mobileQuery.matches);
+  document.body.classList.toggle('is-desktop-layout', !mobileQuery.matches);
+}
+
+function buildDetailUrl(item) {
+  const url = new URL('./detail.html', window.location.href);
+  url.searchParams.set('id', item.detailId);
+  url.searchParams.set('page', String(state.page));
+  return url.toString();
 }
 
 function renderNotices(items) {
@@ -101,7 +107,16 @@ function renderNotices(items) {
     title.textContent = item.title || '未命名公示';
     summary.textContent = item.summary || '点击查看正文。';
 
-    viewButton.addEventListener('click', () => loadDetail(item.link));
+    viewButton.textContent = mobileQuery.matches ? '查看详情' : '页内查看';
+    viewButton.addEventListener('click', () => {
+      if (mobileQuery.matches) {
+        window.location.href = buildDetailUrl(item);
+        return;
+      }
+
+      loadDetail(item.link);
+    });
+
     originLink.href = item.link || '#';
     originLink.textContent = '原站详情';
 
@@ -186,10 +201,6 @@ function renderDetail(data) {
   detailOriginLink.href = data.link || 'https://jwc.fjtcm.edu.cn/955/list.htm';
   detailBody.className = 'detail-body';
   detailBody.innerHTML = `${renderAttachments(data.attachments)}${wrapTables(data.contentHtml || '<p>该公示暂无正文。</p>')}`;
-
-  if (mobileQuery.matches) {
-    detailPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
 }
 
 async function fetchJson(relativePath) {
@@ -225,12 +236,12 @@ async function loadNotices(page = 1, options = {}) {
     sourceBadge.textContent = mobileQuery.matches ? 'mobile' : data.source || 'static';
     statusText.textContent = `共 ${state.totalItems} 条，当前第 ${state.page} 页，本页展示 ${data.itemCountOnPage || state.items.length} 条。`;
 
-    if (shouldSelectFirst && state.items.length && !state.selectedUrl) {
+    if (!mobileQuery.matches && shouldSelectFirst && state.items.length && !state.selectedUrl) {
       await loadDetail(state.items[0].link, { rerenderList: true });
       return;
     }
 
-    if (state.selectedUrl) {
+    if (!mobileQuery.matches && state.selectedUrl) {
       renderNotices(state.items);
     }
   } catch (error) {
@@ -272,29 +283,29 @@ async function loadDetail(url, options = {}) {
 
 refreshButton.addEventListener('click', () => {
   state.selectedUrl = '';
-  loadNotices(state.page);
+  loadNotices(state.page, { selectFirst: false });
 });
 
 prevPageButton.addEventListener('click', () => {
   if (state.page > 1) {
     state.selectedUrl = '';
-    loadNotices(state.page - 1);
+    loadNotices(state.page - 1, { selectFirst: false });
   }
 });
 
 nextPageButton.addEventListener('click', () => {
   if (state.page < state.totalPages) {
     state.selectedUrl = '';
-    loadNotices(state.page + 1);
+    loadNotices(state.page + 1, { selectFirst: false });
   }
 });
 
 mobileQuery.addEventListener('change', () => {
   applyLayoutMode();
-  sourceBadge.textContent = mobileQuery.matches ? 'mobile' : 'static';
+  loadNotices(state.page, { selectFirst: false });
 });
 
 applyLayoutMode();
 renderPagination();
 updateHeroStats();
-loadNotices(1);
+loadNotices(initialPage);
