@@ -9,6 +9,7 @@ const detailPageBody = document.querySelector('#detailPageBody');
 
 const detailId = params.get('id') || '';
 const page = Math.max(1, Number.parseInt(params.get('page') || '1', 10) || 1);
+let currentGeneratedAt = '';
 
 detailBackLink.href = `./index.html?page=${page}`;
 
@@ -90,13 +91,16 @@ async function loadDetail() {
   }
 
   try {
-    const response = await fetch(new URL(`details/${detailId}.json`, DATA_ROOT));
+    const detailUrl = new URL(`details/${detailId}.json`, DATA_ROOT);
+    detailUrl.searchParams.set('_ts', String(Date.now()));
+    const response = await fetch(detailUrl, { cache: 'no-store' });
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
 
     const data = await response.json();
+    currentGeneratedAt = data.generatedAt || data.fetchedAt || currentGeneratedAt;
     renderDetail(data);
   } catch (error) {
     renderError(`请求失败：${error.message}`);
@@ -104,3 +108,24 @@ async function loadDetail() {
 }
 
 loadDetail();
+
+setInterval(async () => {
+  try {
+    const indexUrl = new URL('index.json', DATA_ROOT);
+    indexUrl.searchParams.set('_ts', String(Date.now()));
+    const response = await fetch(indexUrl, { cache: 'no-store' });
+
+    if (!response.ok) {
+      return;
+    }
+
+    const data = await response.json();
+    const latestGeneratedAt = data.generatedAt || data.fetchedAt || '';
+
+    if (currentGeneratedAt && latestGeneratedAt && latestGeneratedAt !== currentGeneratedAt) {
+      loadDetail();
+    }
+  } catch (error) {
+    // Ignore polling failure and keep current detail visible.
+  }
+}, 60000);
