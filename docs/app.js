@@ -25,7 +25,8 @@ const state = {
   totalItems: 0,
   items: [],
   selectedUrl: '',
-  generatedAt: ''
+  generatedAt: '',
+  latestIndex: null
 };
 
 function setListLoading(text = '正在加载数据...') {
@@ -66,6 +67,15 @@ function updateHeroStats() {
   syncTimeText.textContent = formatDateTime(state.generatedAt);
   totalItemsText.textContent = state.totalItems ? `${state.totalItems} 条` : '--';
   totalPagesText.textContent = state.totalPages ? `${state.totalPages} 页` : '--';
+}
+
+function updateSourceBadge(source) {
+  if (mobileQuery.matches) {
+    sourceBadge.textContent = 'mobile';
+    return;
+  }
+
+  sourceBadge.textContent = source || 'static';
 }
 
 function applyLayoutMode() {
@@ -204,13 +214,42 @@ function renderDetail(data) {
 }
 
 async function fetchJson(relativePath) {
-  const response = await fetch(new URL(relativePath, DATA_ROOT));
+  const url = new URL(relativePath, DATA_ROOT);
+  url.searchParams.set('_ts', String(Date.now()));
+  const response = await fetch(url, { cache: 'no-store' });
 
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`);
   }
 
   return response.json();
+}
+
+async function refreshIfUpdated() {
+  try {
+    const latestIndex = await fetchJson('index.json');
+    const latestGeneratedAt = latestIndex.generatedAt || latestIndex.fetchedAt || '';
+
+    if (!latestGeneratedAt) {
+      return;
+    }
+
+    if (!state.latestIndex) {
+      state.latestIndex = latestIndex;
+      return;
+    }
+
+    if (state.generatedAt && latestGeneratedAt !== state.generatedAt) {
+      statusText.textContent = '检测到新数据，正在刷新...';
+      state.latestIndex = latestIndex;
+      await loadNotices(state.page, { selectFirst: !mobileQuery.matches });
+      return;
+    }
+
+    state.latestIndex = latestIndex;
+  } catch (error) {
+    // Ignore background polling errors and keep current content visible.
+  }
 }
 
 async function loadNotices(page = 1, options = {}) {
@@ -224,6 +263,11 @@ async function loadNotices(page = 1, options = {}) {
     state.totalItems = data.totalItems || 0;
     state.items = data.items || [];
     state.generatedAt = data.generatedAt || data.fetchedAt || '';
+    state.latestIndex = {
+      generatedAt: state.generatedAt,
+      totalItems: state.totalItems,
+      totalPages: state.totalPages
+    };
 
     if (!state.items.some((item) => item.link === state.selectedUrl)) {
       state.selectedUrl = '';
@@ -233,7 +277,7 @@ async function loadNotices(page = 1, options = {}) {
     renderPagination();
     updateHeroStats();
 
-    sourceBadge.textContent = mobileQuery.matches ? 'mobile' : data.source || 'static';
+    updateSourceBadge(data.source);
     statusText.textContent = `共 ${state.totalItems} 条，当前第 ${state.page} 页，本页展示 ${data.itemCountOnPage || state.items.length} 条。`;
 
     if (!mobileQuery.matches && shouldSelectFirst && state.items.length && !state.selectedUrl) {
@@ -302,6 +346,7 @@ nextPageButton.addEventListener('click', () => {
 
 mobileQuery.addEventListener('change', () => {
   applyLayoutMode();
+  updateSourceBadge(state.latestIndex?.source || 'static');
   loadNotices(state.page, { selectFirst: false });
 });
 
@@ -309,3 +354,4 @@ applyLayoutMode();
 renderPagination();
 updateHeroStats();
 loadNotices(initialPage);
+setInterval(refreshIfUpdated, 60000);
